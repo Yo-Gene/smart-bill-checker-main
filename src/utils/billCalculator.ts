@@ -1,108 +1,59 @@
-// utils/billCalculator.ts
-
-// PURC Residential Tariffs (GHS per kWh)
 const lifelineRate = 0.795308;
 const regularRate = 1.801867;
 const highRate = 2.380873;
 
-const lifelineService = 2.13;
-const regularService = 10.730886;
-
-// ----------------------
-// POSTPAID BILL CALCULATION
-// ----------------------
-export interface ResidentialBill {
-  energyCharge: number;
-  serviceCharge: number;
-  total: number;
-}
-
-export function calculateResidentialBill(units: number): ResidentialBill {
-  let energyCharge = 0;
-  let serviceCharge = 0;
-
-  if (units <= 30) {
-    energyCharge = units * lifelineRate;
-    serviceCharge = lifelineService;
-  } else if (units <= 300) {
-    energyCharge = units * regularRate;
-    serviceCharge = regularService;
-  } else {
-    energyCharge = 300 * regularRate + (units - 300) * highRate;
-    serviceCharge = regularService;
-  }
-
-  const total = energyCharge + serviceCharge;
-
-  return {
-    energyCharge,
-    serviceCharge,
-    total,
-  };
-}
-
-// ----------------------
-// PREPAID ELECTRICITY AUDIT 
-// ----------------------
-
-const prepaidServiceCharge = 12; // GH₵
-const levyRate = 0.15; // more realistic combined VAT + levies (~15%)
-
-// Tier limits
-const TIER_1_LIMIT = 300; // kWh
-
-export function calculateExpectedUnits(
-  amountPaid: number,
-  arrears: number = 0
-): number {
-  // Step 1: Remove fixed deductions
-  const afterFixedCharges = amountPaid - prepaidServiceCharge - arrears;
-  if (afterFixedCharges <= 0) return 0;
-
-  // Step 2: Remove taxes/levies
-  const energyCredit = afterFixedCharges * (1 - levyRate);
-
-  let remainingMoney = energyCredit;
-  let units = 0;
-
-  // Step 3: Tier 1 (0–300 kWh)
-  const tier1Cost = TIER_1_LIMIT * regularRate;
-
-  if (remainingMoney <= tier1Cost) {
-    // All units fall within Tier 1
-    units += remainingMoney / regularRate;
-    return units;
-  } else {
-    // Fill Tier 1 completely
-    units += TIER_1_LIMIT;
-    remainingMoney -= tier1Cost;
-  }
-
-  // Step 4: Tier 2 (300+ kWh)
-  units += remainingMoney / highRate;
-
-  return units;
-}
-
-export interface PrepaidAudit {
-  expectedUnits: number;
-  unitsReceived: number;
+export interface PrepaidBalanceAudit {
+  unitsUsed: number;
+  energyCost: number;
+  otherDeductions: number;
+  expectedDeduction: number;
+  expectedBalance: number;
+  actualBalance: number;
   difference: number;
-  expectedUnitsDisplay: string;
-  unitsReceivedDisplay: string;
-  differenceDisplay: string;
 }
 
-export function auditPrepaidPurchase(amountPaid: number, unitsReceived: number, arrears: number = 0): PrepaidAudit {
-  const expectedUnits = calculateExpectedUnits(amountPaid, arrears);
-  const difference = expectedUnits - unitsReceived;
+export function calculateEnergyCost(unitsUsed: number): number {
+  const safeUnits = Math.max(0, unitsUsed);
+
+  if (safeUnits <= 30) {
+    return safeUnits * lifelineRate;
+  }
+
+  if (safeUnits <= 300) {
+    return safeUnits * regularRate;
+  }
+
+  return 300 * regularRate + (safeUnits - 300) * highRate;
+}
+
+export function auditPrepaidBalance(
+  startingBalance: number,
+  previousReading: number,
+  currentReading: number,
+  actualBalance: number,
+  otherDeductions: number = 0
+): PrepaidBalanceAudit {
+  const unitsUsed = currentReading - previousReading;
+
+  if (unitsUsed < 0) {
+    throw new Error(
+      "Current meter reading cannot be lower than the previous reading"
+    );
+  }
+
+  const safeDeductions = Math.max(0, otherDeductions);
+  const energyCost = calculateEnergyCost(unitsUsed);
+  const expectedDeduction = energyCost + safeDeductions;
+  const expectedBalance = Math.max(0, startingBalance - expectedDeduction);
+  const difference = expectedBalance - actualBalance;
 
   return {
-    expectedUnits,
-    unitsReceived,
+    unitsUsed,
+    energyCost,
+    otherDeductions: safeDeductions,
+    expectedDeduction,
+    expectedBalance,
+    actualBalance,
     difference,
-    expectedUnitsDisplay: expectedUnits.toFixed(2),
-    unitsReceivedDisplay: unitsReceived.toFixed(2),
-    differenceDisplay: difference.toFixed(2),
   };
 }

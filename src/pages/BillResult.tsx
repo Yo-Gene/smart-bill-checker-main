@@ -1,69 +1,84 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AlertTriangle, CheckCircle, ArrowLeft, Download } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  ArrowLeft,
+  Wallet,
+  Zap,
+} from "lucide-react";
+import { AuditStatus } from "@/utils/historyStorage";
+
+interface BillResultData {
+  startingBalance: string;
+  previousReading: string;
+  currentReading: string;
+  unitsUsed: string;
+  energyCost: string;
+  otherDeductions: string;
+  expectedDeduction: string;
+  expectedBalance: string;
+  actualBalance: string;
+  difference: string;
+  status: AuditStatus;
+}
 
 const BillResult = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const data = location.state as any;
+  const data = location.state as BillResultData | null;
 
   if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center px-5">
-          <p className="text-muted-foreground">No data available.</p>
+          <p className="text-muted-foreground">
+            No calculation data is available.
+          </p>
           <button
             onClick={() => navigate("/bill-input")}
-            className="mt-4 text-secondary underline text-sm"
+            className="mt-4 text-primary underline text-sm"
           >
-            Audit purchase
+            Audit prepaid balance
           </button>
         </div>
       </div>
     );
   }
 
-  const diff = parseFloat(data.difference);
-  const status = data.status as "overcharged" | "undercharged" | "correct";
+  const difference = Number.parseFloat(data.difference);
+  const otherDeductions = Number.parseFloat(data.otherDeductions);
 
-  // ✅ Map status
-  const isOvercharged = status === "overcharged"; // missing units
-  const isUndercharged = status === "undercharged"; // extra units
-  const isCorrect = status === "correct";
+  const isOvercharged = data.status === "overcharged";
+  const isUndercharged = data.status === "undercharged";
+  const isCorrect = data.status === "correct";
 
   const StatusIcon = isOvercharged ? AlertTriangle : CheckCircle;
 
   const statusLabel = isOvercharged
     ? "Possible Overcharge"
     : isUndercharged
-    ? "Extra Units Received"
-    : "Units Correct";
+      ? "Balance Higher Than Expected"
+      : "Balance Correct";
 
-  // ✅ Smart explanation
-  let message = "";
-  if (isOvercharged) {
-    message =
-      "You received significantly fewer units than expected. This may be due to arrears, deductions, or a billing issue.";
-  } else if (isUndercharged) {
-    message = "You received more units than expected. Check if this is reflected on your meter.";
-  } else {
-    message = "Your purchase matches expected ECG values.";
-  }
+  const message = isOvercharged
+    ? "Your meter balance is lower than expected. More money may have been deducted than the calculated electricity cost."
+    : isUndercharged
+      ? "Your meter balance is higher than expected. The meter appears to have deducted less money than calculated."
+      : "Your meter balance is close to the expected balance based on your electricity usage.";
 
   return (
     <div className="min-h-screen pb-24 bg-background">
-
-      {/* Back */}
       <div className="px-5 pt-12 pb-4">
         <button
           onClick={() => navigate(-1)}
           className="text-muted-foreground text-sm flex items-center gap-1"
         >
-          <ArrowLeft size={16} /> Back
+          <ArrowLeft size={16} />
+          Back
         </button>
       </div>
 
-      {/* Status Card */}
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -71,18 +86,18 @@ const BillResult = () => {
           isOvercharged
             ? "bg-destructive/10 border border-destructive/30"
             : isCorrect
-            ? "bg-success/10 border border-success/30"
-            : "bg-secondary/10 border border-secondary/30"
+              ? "bg-success/10 border border-success/30"
+              : "bg-secondary/10 border border-secondary/30"
         }`}
       >
         <StatusIcon
-          size={40}
+          size={42}
           className={`mx-auto ${
             isOvercharged
               ? "text-destructive"
               : isCorrect
-              ? "text-success"
-              : "text-secondary"
+                ? "text-success"
+                : "text-secondary"
           }`}
         />
 
@@ -92,83 +107,86 @@ const BillResult = () => {
 
         <p className="text-sm mt-2 text-muted-foreground">{message}</p>
 
-        {isOvercharged && (
-          <p className="text-destructive font-display font-bold text-2xl mt-3">
-            {diff.toFixed(2)} kWh missing
-          </p>
-        )}
-
-        {isUndercharged && (
-          <p className="text-secondary font-display font-bold text-2xl mt-3">
-            {Math.abs(diff).toFixed(2)} kWh extra
-          </p>
-        )}
-      </motion.div>
-
-      {/* Breakdown */}
-      <div className="mx-5 mt-5 bg-card rounded-2xl border border-border p-5 space-y-4">
-        <h3 className="font-display font-semibold text-foreground">
-          Purchase Breakdown
-        </h3>
-
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Amount Paid</span>
-          <span className="font-display font-semibold text-foreground">
-            GH₵ {data.amountPaid}
-          </span>
-        </div>
-
-        {data.arrears && parseFloat(data.arrears) > 0 && (
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Arrears Deducted</span>
-            <span className="font-display font-semibold text-destructive">
-              GH₵ {data.arrears}
-            </span>
-          </div>
-        )}
-
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Expected Units</span>
-          <span className="font-display font-semibold text-foreground">
-            {data.expectedUnits} kWh
-          </span>
-        </div>
-
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Units Received</span>
-          <span className="font-display font-semibold text-foreground">
-            {data.unitsReceived} kWh
-          </span>
-        </div>
-
-        <div className="border-t border-border pt-3 flex justify-between text-sm">
-          <span className="text-muted-foreground font-medium">Difference</span>
-
-          <span
-            className={`font-display font-bold ${
-              isOvercharged
-                ? "text-destructive"
-                : isCorrect
+        <p
+          className={`font-display font-bold text-2xl mt-4 ${
+            isOvercharged
+              ? "text-destructive"
+              : isCorrect
                 ? "text-success"
                 : "text-secondary"
-            }`}
-          >
-            {diff > 0 ? "-" : "+"}
-            {Math.abs(diff).toFixed(2)} kWh
-          </span>
+          }`}
+        >
+          GH₵ {Math.abs(difference).toFixed(2)}
+        </p>
+
+        <p className="text-xs text-muted-foreground mt-1">
+          {isOvercharged
+            ? "Extra amount deducted"
+            : isUndercharged
+              ? "Amount not deducted"
+              : "Balance difference"}
+        </p>
+      </motion.div>
+
+      <div className="mx-5 mt-5 bg-card rounded-2xl border border-border p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Wallet size={18} className="text-primary" />
+          <h3 className="font-display font-semibold text-foreground">
+            Balance Breakdown
+          </h3>
+        </div>
+
+        <div className="space-y-4 text-sm">
+          <Row label="Starting Balance" value={`GH₵ ${data.startingBalance}`} />
+          <Row label="Expected Deduction" value={`GH₵ ${data.expectedDeduction}`} />
+          <Row label="Expected Balance" value={`GH₵ ${data.expectedBalance}`} />
+          <Row label="Actual Meter Balance" value={`GH₵ ${data.actualBalance}`} />
+
+          <div className="border-t border-border pt-3 flex justify-between gap-4">
+            <span className="text-muted-foreground font-medium">Difference</span>
+            <span
+              className={`font-display font-bold ${
+                isOvercharged
+                  ? "text-destructive"
+                  : isCorrect
+                    ? "text-success"
+                    : "text-secondary"
+              }`}
+            >
+              GH₵ {Math.abs(difference).toFixed(2)}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Actions */}
+      <div className="mx-5 mt-5 bg-card rounded-2xl border border-border p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Zap size={18} className="text-primary" />
+          <h3 className="font-display font-semibold text-foreground">
+            Electricity Usage
+          </h3>
+        </div>
+
+        <div className="space-y-4 text-sm">
+          <Row label="Previous Meter Reading" value={`${data.previousReading} kWh`} />
+          <Row label="Current Meter Reading" value={`${data.currentReading} kWh`} />
+          <Row label="Units Used" value={`${data.unitsUsed} kWh`} />
+          <Row label="Energy Cost" value={`GH₵ ${data.energyCost}`} />
+
+          {otherDeductions > 0 && (
+            <Row
+              label="Other Deductions"
+              value={`GH₵ ${data.otherDeductions}`}
+            />
+          )}
+        </div>
+      </div>
+
       <div className="mx-5 mt-5 flex gap-3">
         {isOvercharged && (
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={() =>
-              navigate("/complaint", {
-                state: data,
-              })
-            }
+            onClick={() => navigate("/complaint", { state: data })}
             className="flex-1 h-12 rounded-xl bg-destructive text-destructive-foreground flex items-center justify-center font-display font-bold text-sm"
           >
             Report Issue
@@ -177,15 +195,23 @@ const BillResult = () => {
 
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate("/history")}
-          className="flex-1 h-12 rounded-xl bg-secondary text-secondary-foreground flex items-center justify-center gap-2 font-display font-bold text-sm"
+          onClick={() => navigate("/bill-input")}
+          className="flex-1 h-12 rounded-xl bg-secondary text-secondary-foreground flex items-center justify-center font-display font-bold text-sm"
         >
-          <Download size={16} />
-          Save Report
+          New Audit
         </motion.button>
       </div>
     </div>
   );
 };
+
+const Row = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex justify-between gap-4">
+    <span className="text-muted-foreground">{label}</span>
+    <span className="font-display font-semibold text-foreground text-right">
+      {value}
+    </span>
+  </div>
+);
 
 export default BillResult;
