@@ -116,7 +116,7 @@ const BillInput = () => {
 
   return (
     <div className="min-h-screen pb-24 bg-background">
-      <div className="bg-secondary px-5 pt-12 pb-6 rounded-b-3xl">
+      <div className="bg-secondary px-5 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-6 rounded-b-3xl">
         <button
           onClick={() => navigate(-1)}
           className="text-secondary-foreground/70 text-sm mb-2"
