@@ -18,6 +18,8 @@ import Tariffs from "./pages/Tariffs";
 import Complaint from "./pages/Complaint";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import HelpSupport from "./pages/HelpSupport";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +41,8 @@ const App = () => (
             <Route path="/complaint" element={<Complaint />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/help" element={<HelpSupport />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
 
