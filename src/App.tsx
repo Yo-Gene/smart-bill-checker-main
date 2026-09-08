@@ -2,7 +2,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 
@@ -30,7 +30,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster position="top-right" />
 
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             <Route path="/splash" element={<Splash />} />
             <Route path="/" element={<Index />} />
@@ -47,7 +47,7 @@ const App = () => (
           </Routes>
 
           <BottomNav />
-        </BrowserRouter>
+        </HashRouter>
       </TooltipProvider>
     </QueryClientProvider>
   </ThemeProvider>
