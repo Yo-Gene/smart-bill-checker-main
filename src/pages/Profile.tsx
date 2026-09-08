@@ -1,9 +1,15 @@
-import { useState, useEffect, ChangeEvent, useContext } from "react";
-import { User, Settings, HelpCircle, Shield, LogOut, Camera } from "lucide-react";
+import { useState, useEffect, ChangeEvent } from "react";
+import {
+  User,
+  Settings,
+  HelpCircle,
+  Shield,
+  Camera,
+  ChevronRight,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ThemeContext } from "@/contexts/ThemeContext"; // we’ll create this context
-import { toast } from "react-hot-toast"; // for notifications
+import { toast } from "react-hot-toast";
 
 interface UserProfile {
   name: string;
@@ -15,8 +21,7 @@ const STORAGE_KEY = "user_profile";
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { darkMode } = useContext(ThemeContext);
-
+  const [editing, setEditing] = useState(false);
   const [user, setUser] = useState<UserProfile>({
     name: "Guest User",
     email: "guest@example.com",
@@ -25,14 +30,18 @@ const Profile = () => {
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setUser(JSON.parse(saved));
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   }, [user]);
-
-  const [editing, setEditing] = useState(false);
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,105 +49,146 @@ const Profile = () => {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setUser({ ...user, avatarUrl: reader.result as string });
+      setUser((current) => ({ ...current, avatarUrl: reader.result as string }));
       toast.success("Avatar updated!");
     };
     reader.readAsDataURL(file);
   };
 
   const handleChange = (field: keyof UserProfile, value: string) => {
-    setUser({ ...user, [field]: value });
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem("app_settings");
-    toast("Logged out successfully!");
-    navigate("/login");
+    setUser((current) => ({ ...current, [field]: value }));
   };
 
   const menuItems = [
-    { icon: Settings, label: "Settings", path: "/settings" },
-    { icon: HelpCircle, label: "Help & Support", path: "/help" },
-    { icon: Shield, label: "Privacy Policy", path: "/privacy" },
+    {
+      icon: Settings,
+      label: "App Settings",
+      description: "Theme, preferences and more",
+      path: "/settings",
+    },
+    {
+      icon: HelpCircle,
+      label: "Help & Support",
+      description: "Get help with the audit system",
+      path: "/help",
+    },
+    {
+      icon: Shield,
+      label: "Privacy Policy",
+      description: "Read how your local data is handled",
+      path: "/privacy",
+    },
   ];
 
   return (
-    <div className={`min-h-screen pb-24 ${darkMode ? "bg-gray-900" : "bg-background"}`}>
-      {/* Header */}
-      <div className={`px-5 pt-12 pb-8 rounded-b-3xl text-center ${darkMode ? "bg-gray-800" : "bg-secondary"}`}>
-        <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3 relative">
-          {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="avatar" className="w-24 h-24 rounded-full object-cover" />
-          ) : (
-            <User size={40} className="text-primary" />
-          )}
-          <label className="absolute bottom-0 right-0 bg-primary/30 p-1 rounded-full cursor-pointer">
-            <Camera size={16} className="text-white" />
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-          </label>
-        </div>
-
-        {editing ? (
-          <div className="space-y-2">
-            <input
-              value={user.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              className="w-52 px-3 py-1 rounded border border-border text-sm text-foreground"
-              placeholder="Name"
-            />
-            <input
-              value={user.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              className="w-52 px-3 py-1 rounded border border-border text-sm text-foreground"
-              placeholder="Email"
-            />
-            <button
-              className="mt-1 text-primary font-bold text-sm"
-              onClick={() => { setEditing(false); toast.success("Profile saved!"); }}
-            >
-              Save
-            </button>
+    <div className="min-h-screen pb-24 bg-muted/30">
+      <div className="px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)+1rem)] max-w-2xl mx-auto">
+        <header className="bg-secondary rounded-[28px] px-5 py-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-secondary-foreground font-display">
+                Profile
+              </h1>
+              <p className="text-secondary-foreground/65 text-sm mt-1">
+                Manage your preferences
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-secondary-foreground/10 flex items-center justify-center">
+              <User size={23} className="text-secondary-foreground" />
+            </div>
           </div>
-        ) : (
-          <>
-            <h1 className="text-lg font-bold text-secondary-foreground font-display">{user.name}</h1>
-            <p className="text-secondary-foreground/60 text-xs">{user.email}</p>
-            <button
-              className="mt-1 text-primary underline text-sm"
-              onClick={() => setEditing(true)}
-            >
-              Edit Profile
-            </button>
-          </>
-        )}
-      </div>
+        </header>
 
-      {/* Menu */}
-      <div className="px-5 mt-5 space-y-2">
-        {menuItems.map((item, i) => (
-          <motion.button
-            key={item.label}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.06 }}
-            className="w-full bg-card rounded-xl border border-border p-4 flex items-center gap-3 hover:bg-primary/5 transition"
-            onClick={() => navigate(item.path)}
-          >
-            <item.icon size={18} className="text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">{item.label}</span>
-          </motion.button>
-        ))}
-
-        {/* Logout */}
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          className="w-full bg-destructive/5 rounded-xl border border-destructive/20 p-4 flex items-center gap-3 mt-4 hover:bg-destructive/10 transition"
-          onClick={handleLogout}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 bg-card rounded-[28px] border border-border/70 shadow-sm p-6 text-center"
         >
-          <LogOut size={18} className="text-destructive" />
-          <span className="text-sm font-medium text-destructive">Log Out</span>
-        </motion.button>
+          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto relative ring-4 ring-background shadow-sm">
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt="Profile"
+                className="w-24 h-24 rounded-full object-cover"
+              />
+            ) : (
+              <User size={40} className="text-primary" />
+            )}
+
+            <label className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-md">
+              <Camera size={16} />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+            </label>
+          </div>
+
+          {editing ? (
+            <div className="mt-5 space-y-3 max-w-sm mx-auto">
+              <input
+                value={user.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                className="w-full h-12 rounded-2xl border border-border bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Name"
+              />
+              <input
+                value={user.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                className="w-full h-12 rounded-2xl border border-border bg-background px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Email"
+              />
+              <button
+                className="w-full h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold"
+                onClick={() => {
+                  setEditing(false);
+                  toast.success("Profile saved!");
+                }}
+              >
+                Save Changes
+              </button>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold text-foreground font-display mt-5">
+                {user.name}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
+              <button
+                className="mt-3 text-primary text-sm font-semibold"
+                onClick={() => setEditing(true)}
+              >
+                Edit Profile
+              </button>
+            </>
+          )}
+        </motion.section>
+
+        <div className="mt-4 space-y-3">
+          {menuItems.map((item, index) => (
+            <motion.button
+              key={item.label}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+              onClick={() => navigate(item.path)}
+              className="w-full bg-card rounded-[22px] border border-border/70 p-4 flex items-center gap-4 text-left shadow-sm hover:bg-primary/5 transition"
+            >
+              <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <item.icon size={19} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {item.description}
+                </p>
+              </div>
+              <ChevronRight size={18} className="text-muted-foreground" />
+            </motion.button>
+          ))}
+        </div>
       </div>
     </div>
   );
