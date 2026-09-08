@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calculator } from "lucide-react";
+import { Calculator, Gauge, WalletCards } from "lucide-react";
 import { motion } from "framer-motion";
 import { auditPrepaidBalance } from "@/utils/billCalculator";
 import { addBillRecord, AuditStatus } from "@/utils/historyStorage";
@@ -16,7 +16,7 @@ const BillInput = () => {
   const [error, setError] = useState("");
 
   const inputClass =
-    "w-full h-14 rounded-xl border border-border bg-card px-4 text-lg font-display font-semibold text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary";
+    "w-full h-14 rounded-2xl border border-border bg-background px-4 text-base font-display font-semibold text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition";
 
   const handleCalculate = () => {
     setError("");
@@ -25,55 +25,38 @@ const BillInput = () => {
     const previous = Number.parseFloat(previousReading);
     const current = Number.parseFloat(currentReading);
     const actual = Number.parseFloat(actualBalance);
-    const deductions = otherDeductions
-      ? Number.parseFloat(otherDeductions)
-      : 0;
+    const deductions = otherDeductions ? Number.parseFloat(otherDeductions) : 0;
 
     if (!Number.isFinite(starting) || starting <= 0) {
       setError("Enter a valid starting balance");
       return;
     }
-
     if (!Number.isFinite(previous) || previous < 0) {
       setError("Enter a valid previous meter reading");
       return;
     }
-
     if (!Number.isFinite(current) || current < 0) {
       setError("Enter a valid current meter reading");
       return;
     }
-
     if (current < previous) {
       setError("Current meter reading cannot be lower than the previous reading");
       return;
     }
-
     if (!Number.isFinite(actual) || actual < 0) {
       setError("Enter a valid current meter balance");
       return;
     }
-
     if (!Number.isFinite(deductions) || deductions < 0) {
       setError("Enter a valid deduction amount");
       return;
     }
 
-    const result = auditPrepaidBalance(
-      starting,
-      previous,
-      current,
-      actual,
-      deductions
-    );
+    const result = auditPrepaidBalance(starting, previous, current, actual, deductions);
 
     let status: AuditStatus = "correct";
-
-    if (result.difference > 1) {
-      status = "overcharged";
-    } else if (result.difference < -1) {
-      status = "undercharged";
-    }
+    if (result.difference > 1) status = "overcharged";
+    else if (result.difference < -1) status = "undercharged";
 
     addBillRecord({
       id: Date.now(),
@@ -115,115 +98,103 @@ const BillInput = () => {
     actualBalance.trim() !== "";
 
   return (
-    <div className="min-h-screen pb-24 bg-background">
-      <div className="bg-secondary px-5 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-6 rounded-b-3xl">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-secondary-foreground/70 text-sm mb-2"
+    <div className="min-h-screen pb-24 bg-muted/30">
+      <div className="px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)+1rem)] max-w-2xl mx-auto">
+        <header className="bg-secondary rounded-[28px] px-5 py-6 shadow-sm">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-secondary-foreground/70 text-xs mb-4"
+          >
+            ← Back
+          </button>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-secondary-foreground font-display">
+                Audit
+              </h1>
+              <p className="text-secondary-foreground/65 text-sm mt-1">
+                Check your prepaid electricity usage
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-secondary-foreground/10 flex items-center justify-center">
+              <Calculator size={23} className="text-secondary-foreground" />
+            </div>
+          </div>
+        </header>
+
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 bg-card rounded-[28px] border border-border/70 shadow-sm p-5 sm:p-6"
         >
-          ← Back
-        </button>
+          <h2 className="text-lg font-bold text-foreground font-display">Enter Your Details</h2>
+          <p className="text-sm text-muted-foreground mt-1 mb-6">
+            Fill in the information below to audit your meter balance.
+          </p>
 
-        <h1 className="text-xl font-bold text-secondary-foreground font-display">
-          Audit Prepaid Balance
-        </h1>
+          <div className="space-y-5">
+            <Field label="Previous Meter Reading (kWh)" icon={Gauge}>
+              <input type="number" step="0.01" value={previousReading} onChange={(e) => setPreviousReading(e.target.value)} placeholder="e.g., 1245.8" className={inputClass} />
+            </Field>
 
-        <p className="text-secondary-foreground/60 text-xs mt-1">
-          Check how much money should remain after electricity use
-        </p>
-      </div>
+            <Field label="Current Meter Reading (kWh)" icon={Gauge}>
+              <input type="number" step="0.01" value={currentReading} onChange={(e) => setCurrentReading(e.target.value)} placeholder="e.g., 1267.5" className={inputClass} />
+            </Field>
 
-      <div className="px-5 mt-6 space-y-4">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            Starting Balance / Top-up Amount (GH₵)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={startingBalance}
-            onChange={(e) => setStartingBalance(e.target.value)}
-            placeholder="e.g., 200"
-            className={inputClass}
-          />
-        </div>
+            <Field label="Starting Balance / Top-up Amount (GH₵)" icon={WalletCards}>
+              <input type="number" step="0.01" value={startingBalance} onChange={(e) => setStartingBalance(e.target.value)} placeholder="e.g., 200.00" className={inputClass} />
+            </Field>
 
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            Previous Meter Reading (kWh)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={previousReading}
-            onChange={(e) => setPreviousReading(e.target.value)}
-            placeholder="e.g., 1245.8"
-            className={inputClass}
-          />
-        </div>
+            <Field label="Current Meter Balance (GH₵)" icon={WalletCards}>
+              <input type="number" step="0.01" value={actualBalance} onChange={(e) => setActualBalance(e.target.value)} placeholder="e.g., 158.30" className={inputClass} />
+            </Field>
 
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            Current Meter Reading (kWh)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={currentReading}
-            onChange={(e) => setCurrentReading(e.target.value)}
-            placeholder="e.g., 1267.5"
-            className={inputClass}
-          />
-        </div>
+            <Field label="Other Deductions (Optional)" icon={WalletCards}>
+              <input type="number" step="0.01" value={otherDeductions} onChange={(e) => setOtherDeductions(e.target.value)} placeholder="e.g., 2.50" className={inputClass} />
+            </Field>
+          </div>
 
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            Current Meter Balance (GH₵)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={actualBalance}
-            onChange={(e) => setActualBalance(e.target.value)}
-            placeholder="e.g., 158.30"
-            className={inputClass}
-          />
-        </div>
+          {error && (
+            <div className="mt-5 rounded-2xl bg-destructive/10 px-4 py-3 text-destructive text-sm font-medium">
+              {error}
+            </div>
+          )}
 
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            Other Deductions (Optional)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={otherDeductions}
-            onChange={(e) => setOtherDeductions(e.target.value)}
-            placeholder="e.g., 2.50"
-            className={inputClass}
-          />
-        </div>
-
-        {error && (
-          <p className="text-destructive text-sm font-medium">{error}</p>
-        )}
-
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={handleCalculate}
-          disabled={!isValid}
-          className={`w-full h-14 rounded-xl font-display font-bold text-base flex items-center justify-center gap-2 mt-6 ${
-            isValid
-              ? "bg-primary text-primary-foreground shadow-lg"
-              : "bg-muted text-muted-foreground cursor-not-allowed"
-          }`}
-        >
-          <Calculator size={20} />
-          Audit Balance
-        </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCalculate}
+            disabled={!isValid}
+            className={`w-full h-14 rounded-2xl font-display font-bold text-base flex items-center justify-center gap-2 mt-7 transition ${
+              isValid
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            }`}
+          >
+            <Calculator size={20} />
+            Calculate Audit
+          </motion.button>
+        </motion.section>
       </div>
     </div>
   );
 };
+
+const Field = ({
+  label,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) => (
+  <div>
+    <div className="flex items-center gap-2 mb-2">
+      <Icon size={15} className="text-primary" />
+      <label className="text-sm font-semibold text-foreground">{label}</label>
+    </div>
+    {children}
+  </div>
+);
 
 export default BillInput;
