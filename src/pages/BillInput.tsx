@@ -4,6 +4,7 @@ import { Calculator, Gauge, WalletCards } from "lucide-react";
 import { motion } from "framer-motion";
 import { auditPrepaidBalance } from "@/utils/billCalculator";
 import { addBillRecord, AuditStatus } from "@/utils/historyStorage";
+import { notifyAuditResult } from "@/utils/notifications";
 
 const BillInput = () => {
   const navigate = useNavigate();
@@ -73,6 +74,8 @@ const BillInput = () => {
       difference: result.difference,
       status,
     });
+
+    notifyAuditResult(status, result.difference, result.actualBalance);
 
     navigate("/bill-result", {
       state: {
