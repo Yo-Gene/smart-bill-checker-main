@@ -2,9 +2,11 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-// https://vitejs.dev/config/
+// Use the repository subpath on GitHub Pages, but root paths everywhere else (e.g. Vercel).
+const isGitHubActions = process.env.GITHUB_ACTIONS === "true";
+
 export default defineConfig(() => ({
-  base: "/smart-bill-checker-main/",
+  base: isGitHubActions ? "/smart-bill-checker-main/" : "/",
   server: {
     host: "::",
     port: 8080,
