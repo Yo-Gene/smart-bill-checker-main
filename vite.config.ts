@@ -4,6 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  base: "/smart-bill-checker-main/",
   server: {
     host: "::",
     port: 8080,
