@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -8,6 +9,7 @@ import { Toaster } from "sonner";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import BottomNav from "./components/BottomNav";
+import { checkAuditReminder } from "./utils/notifications";
 
 import Splash from "./pages/Splash";
 import Index from "./pages/Index";
@@ -24,6 +26,14 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const NotificationReminder = () => {
+  useEffect(() => {
+    checkAuditReminder();
+  }, []);
+
+  return null;
+};
+
 const App = () => (
   <ThemeProvider>
     <QueryClientProvider client={queryClient}>
@@ -31,6 +41,8 @@ const App = () => (
         <Toaster position="top-right" />
 
         <HashRouter>
+          <NotificationReminder />
+
           <Routes>
             <Route path="/splash" element={<Splash />} />
             <Route path="/" element={<Index />} />
