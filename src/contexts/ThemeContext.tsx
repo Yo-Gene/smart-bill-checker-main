@@ -10,25 +10,20 @@ export const ThemeContext = createContext<ThemeContextType>({
   setDarkMode: () => {},
 });
 
+const THEME_KEY = "app_theme";
+
+const getInitialTheme = () => {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(THEME_KEY) === "dark";
+};
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(getInitialTheme);
 
-  // Load saved theme from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("app_settings");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setDarkMode(parsed.darkMode);
-    }
-  }, []);
-
-  // Apply 'dark' class to <html> globally
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", darkMode);
+    document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
+    localStorage.setItem(THEME_KEY, darkMode ? "dark" : "light");
   }, [darkMode]);
 
   return (
